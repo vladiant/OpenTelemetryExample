@@ -3,11 +3,16 @@ WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
+RUN apt-get update && \
+    apt-get install -y curl wget iputils-ping dnsutils && \
+    rm -rf /var/lib/apt/lists/*
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY ["DotnetTelemetryPlayground.ApiService/DotnetTelemetryPlayground.ApiService.csproj", "DotnetTelemetryPlayground.ApiService/"]
 COPY ["DotnetTelemetryPlayground.ServiceDefaults/DotnetTelemetryPlayground.ServiceDefaults.csproj", "DotnetTelemetryPlayground.ServiceDefaults/"]
 COPY ["DotnetTelemetryPlayground.Shared/DotnetTelemetryPlayground.Shared.csproj", "DotnetTelemetryPlayground.Shared/"]
+COPY ["Custom.Client/Custom.Client.csproj", "Custom.Client/"]
 RUN dotnet restore "DotnetTelemetryPlayground.ApiService/DotnetTelemetryPlayground.ApiService.csproj"
 COPY . .
 WORKDIR "/src/DotnetTelemetryPlayground.ApiService"

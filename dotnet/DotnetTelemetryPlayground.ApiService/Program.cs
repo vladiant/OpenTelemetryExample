@@ -6,8 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire components.
 builder.AddServiceDefaults();
-builder.AddKeyedMongoDBClient(name: "mongodb");
-builder.AddPulsarClient(connectionName: "pulsar");
+builder.Services.AddPulsarClient(builder.Configuration);
 
 // Add Serilog
 builder.Host.UseSerilog((context, config) =>

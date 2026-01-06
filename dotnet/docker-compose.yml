@@ -14,20 +14,32 @@ services:
       - mongodb_data:/data/db
     networks:
       - telemetry-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   pulsar:
-    image: apachepulsar/pulsar:latest
+    image: apachepulsar/pulsar:3.3.0
     container_name: telemetry-pulsar
     command: bin/pulsar standalone
     ports:
-      - "6650:6650"  # Pulsar broker
-      - "8081:8080"  # Pulsar admin
+      - "6650:6650"
+      - "8081:8080"
     volumes:
       - pulsar_data:/pulsar/data
     networks:
       - telemetry-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/admin/v2/clusters"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
 
-  # OpenTelemetry Collector (optional for local testing)
+  # OpenTelemetry Collector - Main telemetry receiver
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: telemetry-otel-collector
@@ -35,21 +47,26 @@ services:
     volumes:
       - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
-      - "4317:4317"   # OTLP gRPC receiver
+      - "4317:4317"   # OTLP gRPC receiver (services send telemetry here)
       - "4318:4318"   # OTLP HTTP receiver
-      - "8888:8888"   # Prometheus metrics
+      - "8888:8888"   # Prometheus metrics (collector's own metrics)
     networks:
       - telemetry-network
+    restart: unless-stopped
 
-  # Jaeger for trace visualization (optional)
+  # Jaeger - Trace visualization (receives from OTel Collector)
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: telemetry-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
     ports:
       - "16686:16686"  # Jaeger UI
-      - "14250:14250"  # gRPC
+      - "14250:14250"  # gRPC collector endpoint (OTel Collector connects here)
+      # Note: Port 4317 removed - Jaeger receives from OTel Collector internally
     networks:
       - telemetry-network
+    restart: unless-stopped
 
   # Application Services
   apiservice:
@@ -62,16 +79,41 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
+      
+      # MongoDB Configuration
       - ConnectionStrings__MongoDB=mongodb://admin:password@mongodb:27017
+      - MongoDB__ConnectionString=mongodb://admin:password@mongodb:27017
+      - MongoDB__DatabaseName=WeatherForecastDB
+      
+      # Pulsar Configuration (multiple formats for compatibility)
       - Pulsar__ServiceUrl=pulsar://pulsar:6650
+      - Pulsar:ServiceUrl=pulsar://pulsar:6650
+      
+      # OpenTelemetry Configuration
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=ApiService
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      
+      # Logging
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft.AspNetCore=Warning
+      
     depends_on:
-      - mongodb
-      - pulsar
-      - otel-collector
+      mongodb:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - telemetry-network
+    restart: on-failure:3
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   apiserviceatfront:
     build:
@@ -83,20 +125,45 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
-      - ApiService__BaseUrl=http://apiservice:8080
+      
+      # Backend Service Configuration
+      - services__apiservice__http__0=http://apiservice:8080
+      
+      # Pulsar Configuration
       - Pulsar__ServiceUrl=pulsar://pulsar:6650
+      - Pulsar:ServiceUrl=pulsar://pulsar:6650
+      
+      # OpenTelemetry Configuration
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=ApiServiceAtFront
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      
+      # Logging
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft.AspNetCore=Warning
+      
     depends_on:
-      - apiservice
-      - pulsar
-      - otel-collector
+      apiservice:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - telemetry-network
+    restart: on-failure:3
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
 volumes:
   mongodb_data:
+    driver: local
   pulsar_data:
+    driver: local
 
 networks:
   telemetry-network:

@@ -28,12 +28,23 @@ public static class StartupExtensions
         // Add fluent validation
         services.AddValidatorsFromAssembly(typeof(StartupExtensions).Assembly);
 
+        // Add MongoDB
+        services.AddSingleton<IMongoDatabase>(sp =>
+        {
+            var connectionString = configuration["ConnectionStrings__MongoDB"] 
+                                 ?? configuration["MongoDB__ConnectionString"] 
+                                 ?? "mongodb://admin:password@mongodb:27017";
+            var databaseName = configuration["MongoDB__DatabaseName"] ?? "WeatherForecastDB";
+            var client = new MongoClient(connectionString);
+            return client.GetDatabase(databaseName);
+        });
+
         // Add Weather module DB
         services.AddScoped<ISaveChangesInterceptor, FillMandatoryFields>();
         services.AddScoped<ISaveChangesInterceptor, DispatchDomainEvents>();
         services.AddScoped(sp =>
         {
-            IMongoDatabase mongoDB = sp.GetRequiredKeyedService<IMongoDatabase>("mongodb");
+            IMongoDatabase mongoDB = sp.GetRequiredService<IMongoDatabase>();
 
             DbContextOptionsBuilder optionsBuilder = new();
             optionsBuilder.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());

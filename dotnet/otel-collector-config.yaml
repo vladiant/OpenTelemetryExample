@@ -1,3 +1,6 @@
+# otel-collector-config.yaml
+# OpenTelemetry Collector configuration for Docker environment
+
 receivers:
   otlp:
     protocols:
@@ -9,32 +12,45 @@ receivers:
 processors:
   batch:
     timeout: 10s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
 
 exporters:
-  logging:
-    loglevel: debug
-
-  jaeger:
-    endpoint: jaeger:14250
+  # Debug exporter - logs telemetry to console
+  debug:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+  
+  # Jaeger exporter - sends traces to Jaeger using gRPC
+  otlp/jaeger:
+    endpoint: jaeger:4317
     tls:
       insecure: true
 
-  prometheus:
-    endpoint: 0.0.0.0:8888
-
 service:
   pipelines:
+    # Traces pipeline
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, jaeger]
-
+      exporters: [debug, otlp/jaeger]
+    
+    # Metrics pipeline
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, prometheus]
-
+      exporters: [debug]
+    
+    # Logs pipeline
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging]
+      exporters: [debug]
+
+  # Telemetry configuration for the collector itself
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
