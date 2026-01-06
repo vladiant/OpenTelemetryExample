@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  mongodb:
+    image: mongo:latest
+    container_name: telemetry-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - telemetry-network
+
+  pulsar:
+    image: apachepulsar/pulsar:latest
+    container_name: telemetry-pulsar
+    command: bin/pulsar standalone
+    ports:
+      - "6650:6650"  # Pulsar broker
+      - "8081:8080"  # Pulsar admin
+    volumes:
+      - pulsar_data:/pulsar/data
+    networks:
+      - telemetry-network
+
+  # OpenTelemetry Collector (optional for local testing)
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: telemetry-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Prometheus metrics
+    networks:
+      - telemetry-network
+
+  # Jaeger for trace visualization (optional)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: telemetry-jaeger
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14250:14250"  # gRPC
+    networks:
+      - telemetry-network
+
+  # Application Services
+  apiservice:
+    build:
+      context: .
+      dockerfile: DotnetTelemetryPlayground.ApiService/Dockerfile
+    container_name: telemetry-apiservice
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__MongoDB=mongodb://admin:password@mongodb:27017
+      - Pulsar__ServiceUrl=pulsar://pulsar:6650
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=ApiService
+    depends_on:
+      - mongodb
+      - pulsar
+      - otel-collector
+    networks:
+      - telemetry-network
+
+  apiserviceatfront:
+    build:
+      context: .
+      dockerfile: DotnetTelemetryPlayground.ApiServiceAtFront/Dockerfile
+    container_name: telemetry-apiserviceatfront
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ApiService__BaseUrl=http://apiservice:8080
+      - Pulsar__ServiceUrl=pulsar://pulsar:6650
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=ApiServiceAtFront
+    depends_on:
+      - apiservice
+      - pulsar
+      - otel-collector
+    networks:
+      - telemetry-network
+
+volumes:
+  mongodb_data:
+  pulsar_data:
+
+networks:
+  telemetry-network:
+    driver: bridge
