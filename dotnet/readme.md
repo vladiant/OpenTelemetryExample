@@ -751,4 +751,56 @@ The orchestration layer for the entire solution, built using .NET Aspire. This p
 - **Performance Monitoring**: Request duration, throughput, and queue depth metrics
 - **Error Correlation**: Automatic error tracking across distributed operations
 
+## Docker usage
+
+### Build and run
+```
+# Build all images
+docker-compose build
+
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+### Access the Application
+* Frontend API: <http://localhost:5000/weather>
+* Backend API: <http://localhost:5001/weather>
+* Jaeger UI: <http://localhost:16686>
+* Pulsar Admin: <http://localhost:8081>
+* MongoDB: <mongodb://admin:password@localhost:27017>
+
+### Testing the Application
+```
+# Test the frontend service
+curl --location --request GET 'http://localhost:5000/weather/' \
+     --header 'Content-Type: application/json' \
+     --data '{
+         "maxResults": 6
+     }'
+
+# Create a weather forecast
+curl --location 'http://localhost:5000/weather/' \
+     --header 'Content-Type: application/json' \
+     --data '{
+         "date": "2025-12-17",
+         "temperatureC": -10,
+         "summary": "Cold as hell"
+     }'
+
+# Update a weather forecast
+curl --location --request PUT 'http://localhost:5000/weather/' \
+     --header 'Content-Type: application/json' \
+     --data '{
+         "date": "2025-12-17",
+         "temperatureC": -22,
+         "summary": "Even colder"
+     }'
+```
+
 ## NB. This project is for educational and experimentation purposes.
