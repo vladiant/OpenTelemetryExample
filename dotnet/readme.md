@@ -677,23 +677,17 @@ The orchestration layer for the entire solution, built using .NET Aspire. This p
 
 ### Running the Solution
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd dotnet-telemetry-playground
-   ```
-
-2. **Restore dependencies**
+1. **Restore dependencies**
    ```bash
    dotnet restore
    ```
 
-3. **Run with Aspire**
+2. **Run with Aspire**
    ```bash
    dotnet run --project DotnetTelemetryPlayground.AppHost\DotnetTelemetryplayground.AppHost.csproj
    ```
 
-4. **Access the Aspire Dashboard**
+3. **Access the Aspire Dashboard**
    - Open your browser to the URL shown in the console
    - Monitor services, traces, metrics, and logs in real-time
 
@@ -701,7 +695,7 @@ The orchestration layer for the entire solution, built using .NET Aspire. This p
 
 1. **Service-to-Service Communication - Basic API Calls**
    ```bash
-   curl --location --request GET 'https://localhost:7055/weather/' \
+   curl --location --request GET 'https://localhost:5000/weather/' \
         --header 'Content-Type: application/json' \
         --data '{
             "maxResults": 6
@@ -714,7 +708,7 @@ The orchestration layer for the entire solution, built using .NET Aspire. This p
 
 2. **Async Message Patterns**
    ```bash
-   curl --location 'https://localhost:7055/weather/' \
+   curl --location 'https://localhost:5000/weather/' \
         --header 'Content-Type: application/json' \
         --data '{
             "date": "2025-12-17",
@@ -724,7 +718,7 @@ The orchestration layer for the entire solution, built using .NET Aspire. This p
    ```
    and
     ```bash
-    curl --location --request PUT 'https://localhost:7055/weather/' \
+    curl --location --request PUT 'https://localhost:5000/weather/' \
         --header 'Content-Type: application/json' \
         --data '{
             "date": "2025-12-17",
