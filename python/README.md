@@ -60,32 +60,8 @@ All services are instrumented with OpenTelemetry and send traces to Jaeger.
 - Docker and Docker Compose installed
 - Ports 8000-8004 and 16686 available
 
-### 1. Create Directory Structure
 
-```bash
-mkdir -p otel-demo/services/{api-gateway,user-service,order-service,database-service,inventory-service}
-cd otel-demo
-```
-
-### 2. Copy Files
-
-Place the provided files in the following locations:
-
-- `docker-compose.yml` in the root directory
-- `requirements.txt` in the root directory (copy to each service directory)
-- Service `main.py` files in their respective `services/*/` directories
-- `Dockerfile` in each service directory
-
-For each service directory, copy both `requirements.txt` and `Dockerfile`:
-
-```bash
-for service in api-gateway user-service order-service database-service inventory-service; do
-  cp requirements.txt services/$service/
-  cp Dockerfile services/$service/
-done
-```
-
-### 3. Start the Services
+### 1. Start the Services
 
 ```bash
 docker-compose up --build
@@ -93,7 +69,7 @@ docker-compose up --build
 
 Wait for all services to start. You should see log messages indicating services are running.
 
-### 4. Access Jaeger UI
+### 2. Access Jaeger UI
 
 Open your browser and navigate to:
 ```
