@@ -1,82 +1,83 @@
+using Custom.Client.ApachePulsar;
 using DotPulsar;
-using DotPulsar.Abstractions;
-using DotPulsar.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using System;
 
-namespace Microsoft.Extensions.Hosting
+namespace Microsoft.Extensions.Hosting;
+
+public static class PulsarExtentions
 {
-    public static class PulsarExtentions
+    public static void AddPulsarClient(
+        this IHostApplicationBuilder builder,
+        string connectionName,
+        Action<PulsarSettings>? configureSettings = null) =>
+        AddPulsarClient(
+            builder,
+            PulsarSettings.ConfigurationSectionName,
+            configureSettings,
+            connectionName,
+            serviceKey: null);
+
+    public static void AddKeyedPulsarClient(
+        this IHostApplicationBuilder builder,
+        string name,
+        Action<PulsarSettings>? configureSettings = null)
     {
-        public static IServiceCollection AddPulsarClient(
-            this IServiceCollection services,
-            IConfiguration configuration)
-        {
-            services.AddSingleton<IPulsarClient>(sp =>
+        if (string.IsNullOrEmpty(name)) {
+            throw new Exception("Invalid keyed name");
+        }
+
+        AddPulsarClient(
+            builder,
+            $"{PulsarSettings.ConfigurationSectionName}:{name}",
+            configureSettings,
+            name,
+            serviceKey: name);
+    }
+
+    private static void AddPulsarClient(
+        this IHostApplicationBuilder builder,
+        string configurationSectionName,
+        Action<PulsarSettings>? configureSettings,
+        string connectionName,
+        object? serviceKey)
+    {
+        PulsarSettings settings = new();
+
+        builder.Configuration
+               .GetSection(configurationSectionName)
+               .Bind(settings);
+
+        if (builder.Configuration.GetConnectionString(connectionName) is string connectionString) {
+            settings.ParseConnectionString(connectionString);
+        }
+
+        configureSettings?.Invoke(settings);
+
+        if (serviceKey is null) {
+            builder.Services.AddScoped(sp =>
             {
-                // Try multiple configuration key formats with extensive logging
-                Console.WriteLine("[PULSAR] Starting Pulsar client configuration...");
-                
-                var serviceUrl = configuration["Pulsar:ServiceUrl"] 
-                              ?? configuration["Pulsar__ServiceUrl"]
-                              ?? Environment.GetEnvironmentVariable("Pulsar__ServiceUrl")
-                              ?? Environment.GetEnvironmentVariable("Pulsar:ServiceUrl")
-                              ?? "pulsar://pulsar:6650";
-                
-                Console.WriteLine($"[PULSAR] Configuration values found:");
-                Console.WriteLine($"  - Pulsar:ServiceUrl = {configuration["Pulsar:ServiceUrl"]}");
-                Console.WriteLine($"  - Pulsar__ServiceUrl = {configuration["Pulsar__ServiceUrl"]}");
-                Console.WriteLine($"  - ENV Pulsar__ServiceUrl = {Environment.GetEnvironmentVariable("Pulsar__ServiceUrl")}");
-                Console.WriteLine($"[PULSAR] Using ServiceUrl: {serviceUrl}");
-                
-                if (string.IsNullOrWhiteSpace(serviceUrl))
-                {
-                    var error = "Pulsar ServiceUrl is null or empty after checking all sources!";
-                    Console.WriteLine($"[PULSAR] ERROR: {error}");
-                    throw new InvalidOperationException(error);
-                }
-
-                try
-                {
-                    if (!Uri.TryCreate(serviceUrl, UriKind.Absolute, out var uri))
-                    {
-                        throw new InvalidOperationException($"Invalid Pulsar URL format: {serviceUrl}");
-                    }
-
-                    Console.WriteLine($"[PULSAR] Building Pulsar client with URI: {uri}");
-                    
-                    var client = PulsarClient.Builder()
-                        .ServiceUrl(uri)
-                        .Build();
-                    
-                    Console.WriteLine($"[PULSAR] ✅ Pulsar client created successfully!");
-                    return client;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[PULSAR] ❌ ERROR: {ex.Message}");
-                    Console.WriteLine($"[PULSAR] Stack trace: {ex.StackTrace}");
-                    throw;
-                }
+                return PulsarClient.Builder()
+                                   .ServiceUrl(settings.Endpoint!)
+                                   .Build();
             });
-
-            return services;
+        } else {
+            builder.Services.AddKeyedScoped(serviceKey, (sp, key) =>
+            {
+                return PulsarClient.Builder()
+                                   .ServiceUrl(settings.Endpoint!)
+                                   .Build();
+            });
         }
 
-        public static IHostApplicationBuilder AddPulsarClient(
-            this IHostApplicationBuilder builder)
-        {
-            return AddPulsarClient(builder, builder.Configuration);
+        if (!settings.DisableTracing) {
+            builder.Services.AddOpenTelemetry()
+                            .WithTracing(traceBuilder => traceBuilder.AddSource("DotPulsar"));
         }
 
-        public static IHostApplicationBuilder AddPulsarClient(
-            this IHostApplicationBuilder builder,
-            IConfiguration configuration)
-        {
-            builder.Services.AddPulsarClient(configuration);
-            return builder;
+        if (!settings.DisableMetrics) {
+            builder.Services.AddOpenTelemetry()
+                            .WithMetrics(metricsBuilder => metricsBuilder.AddMeter("DotPulsar"));
         }
     }
 }
