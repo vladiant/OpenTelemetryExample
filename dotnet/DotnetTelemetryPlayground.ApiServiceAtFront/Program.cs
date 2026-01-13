@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire components.
 builder.AddServiceDefaults();
-builder.Services.AddPulsarClient(builder.Configuration);
+builder.AddPulsarClient("pulsar", settings => settings.Endpoint = new Uri(builder.Configuration["Pulsar:ServiceUrl"]!));
 
 // Add Serilog
 builder.Host.UseSerilog((context, config) =>
