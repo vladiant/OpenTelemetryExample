@@ -25,12 +25,15 @@ This C# client demonstrates how to implement OTEL in .NET applications to create
 
 ## Prerequisites
 
-- **.NET 9 SDK** - Latest LTS version with enhanced OpenTelemetry support
+- **.NET 9 SDK** - Latest LTS version with enhanced OpenTelemetry support (for local development)
+- **Docker** - For containerized builds and runs
 - **Visual Studio 2022** or **VS Code with C# extension** - Development environment
-- **Running API Service** - Target service at `http://localhost:5079` (or other in your local setup)
+- **Running API Service** - Target service at `http://localhost:5000` (or other in your local setup)
 - **OTLP Collector** - Telemetry endpoint at `http://localhost:19198` (or other in your local setup)
 
 ## 🔧 Installation & Setup
+
+### Local Development
 
 ```bash
 # Navigate to the project directory
@@ -45,6 +48,24 @@ dotnet build
 # Run the application
 dotnet run
 ```
+
+### Docker
+
+To build and run the application using Docker:
+
+```bash
+# Build the Docker image
+docker build -t test-otel-client .
+
+# Run the container
+# Note: Update the endpoints if your API service and OTLP collector are not on localhost
+docker run --network host test-otel-client
+
+# Or run with custom environment variables
+docker run -e API_ENDPOINT=http://host.docker.internal:5000 -e OTLP_ENDPOINT=http://host.docker.internal:19198 test-otel-client
+```
+
+The Docker setup uses a multi-stage build for optimal image size and includes all necessary dependencies.
 
 ## 🎯 Usage
 
@@ -297,7 +318,7 @@ public static class DefaultValues
     public const string Endpoint = "http://localhost:19198";
     public const string ApiKey = "x-otlp-api-key=335d4942d612cec23a138a9e76df2d6c";
     public const string HttpClientName = "ApiServiceClient";
-    public const string ApiFrontServiceUrl = "http://localhost:5079";
+    public const string ApiFrontServiceUrl = "http://localhost:5000";
 }
 ```
 
