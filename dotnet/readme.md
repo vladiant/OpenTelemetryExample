@@ -695,7 +695,7 @@ The orchestration layer for the entire solution, built using .NET Aspire. This p
 
 1. **Service-to-Service Communication - Basic API Calls**
    ```bash
-   curl --location --request GET 'https://localhost:5000/weather/' \
+   curl --location --request GET 'https://localhost:5001/weather/' \
         --header 'Content-Type: application/json' \
         --data '{
             "maxResults": 6
@@ -708,7 +708,7 @@ The orchestration layer for the entire solution, built using .NET Aspire. This p
 
 2. **Async Message Patterns**
    ```bash
-   curl --location 'https://localhost:5000/weather/' \
+   curl --location 'https://localhost:5001/weather/' \
         --header 'Content-Type: application/json' \
         --data '{
             "date": "2025-12-17",
@@ -718,7 +718,7 @@ The orchestration layer for the entire solution, built using .NET Aspire. This p
    ```
    and
     ```bash
-    curl --location --request PUT 'https://localhost:5000/weather/' \
+    curl --location --request PUT 'https://localhost:5001/weather/' \
         --header 'Content-Type: application/json' \
         --data '{
             "date": "2025-12-17",
