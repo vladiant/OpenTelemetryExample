@@ -1,0 +1,37 @@
+{
+    "name": "test-otel-client-ts",
+    "version": "1.0.0",
+    "description": "TypeScript OpenTelemetry client test project",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "dev": "ts-node src/index.ts",
+        "dev:complex": "ts-node src/index.ts complex",
+        "simple": "npm run build && node dist/index.js",
+        "complex": "npm run build && node dist/index.js complex"
+    },
+    "keywords": [
+        "opentelemetry",
+        "typescript",
+        "nodejs",
+        "tracing",
+        "logging"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^20.10.0",
+        "ts-node": "^10.9.1",
+        "typescript": "^5.3.0"
+    },
+    "dependencies": {
+        "@opentelemetry/api": "^1.9.0",
+        "@opentelemetry/resources": "^2.2.0",
+        "@opentelemetry/semantic-conventions": "^1.38.0",
+        "@opentelemetry/sdk-node": "^0.208.0",
+        "@opentelemetry/exporter-logs-otlp-grpc": "^0.208.0",
+        "@opentelemetry/exporter-trace-otlp-grpc": "^0.208.0",
+        "axios": "^1.13.2"
+    }
+}

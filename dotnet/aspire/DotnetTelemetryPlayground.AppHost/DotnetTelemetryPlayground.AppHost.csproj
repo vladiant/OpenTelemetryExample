@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.0.2" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>77dd54b0-e042-4301-92a9-bcde9407d217</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Custom.Hosting\Custom.Hosting.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\DotnetTelemetryPlayground.ApiService\DotnetTelemetryPlayground.ApiService.csproj" />
+    <ProjectReference Include="..\DotnetTelemetryPlayground.ApiServiceAtFront\DotnetTelemetryPlayground.ApiServiceAtFront.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.MongoDB" Version="13.0.2" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0" />
+  </ItemGroup>
+
+</Project>
