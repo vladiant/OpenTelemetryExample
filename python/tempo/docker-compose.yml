@@ -1,0 +1,116 @@
+version: "3.9"
+
+services:
+  # Grafana Tempo - Distributed Tracing Backend
+  tempo:
+    image: grafana/tempo:2.3.1
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml
+      - tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    networks:
+      - tracing-network
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:10.2.3
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - NO_PROXY=
+      - http_proxy=
+      - https_proxy=
+      - no_proxy=
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - tempo
+    networks:
+      - tracing-network
+
+  # API Gateway Service
+  api-gateway:
+    build:
+      context: ./services
+      dockerfile: api-gateway/Dockerfile
+    environment:
+      - SERVICE_NAME=api-gateway
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
+      - ORDER_SERVICE_URL=http://order-service:8001
+      - INVENTORY_SERVICE_URL=http://inventory-service:8002
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - NO_PROXY=
+      - http_proxy=
+      - https_proxy=
+      - no_proxy=
+    ports:
+      - "8000:8000"
+    depends_on:
+      - tempo
+      - order-service
+      - inventory-service
+    networks:
+      - tracing-network
+
+  # Order Service
+  order-service:
+    build:
+      context: ./services
+      dockerfile: order-service/Dockerfile
+    environment:
+      - SERVICE_NAME=order-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
+      - INVENTORY_SERVICE_URL=http://inventory-service:8002
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - NO_PROXY=
+      - http_proxy=
+      - https_proxy=
+      - no_proxy=
+    ports:
+      - "8001:8001"
+    depends_on:
+      - tempo
+    networks:
+      - tracing-network
+
+  # Inventory Service
+  inventory-service:
+    build:
+      context: ./services
+      dockerfile: inventory-service/Dockerfile
+    environment:
+      - SERVICE_NAME=inventory-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - NO_PROXY=
+      - http_proxy=
+      - https_proxy=
+      - no_proxy=
+    ports:
+      - "8002:8002"
+    depends_on:
+      - tempo
+    networks:
+      - tracing-network
+
+volumes:
+  tempo-data:
+  grafana-data:
+
+networks:
+  tracing-network:
+    driver: bridge
