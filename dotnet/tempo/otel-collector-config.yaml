@@ -1,0 +1,54 @@
+# otel-collector-config.yaml
+# OpenTelemetry Collector configuration for Docker environment
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+exporters:
+  # Debug exporter - logs telemetry to console
+  debug:
+    verbosity: detailed
+  
+  # Grafana Tempo exporter - sends traces to Tempo's OTLP receiver
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug, otlp/tempo]
+    
+    # Metrics pipeline
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    
+    # Logs pipeline
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+
+  # Telemetry configuration for the collector itself
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed

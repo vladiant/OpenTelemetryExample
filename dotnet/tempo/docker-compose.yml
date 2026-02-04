@@ -1,0 +1,195 @@
+version: '3.8'
+
+services:
+  # MongoDB with replica set for local development
+  mongo:
+    image: mongo:7.0
+    container_name: dotnet-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    networks:
+      - dotnet-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Apache Pulsar broker
+  pulsar:
+    image: apachepulsar/pulsar:latest
+    container_name: dotnet-pulsar
+    restart: unless-stopped
+    command: bin/pulsar standalone
+    ports:
+      - "6650:6650"    # Pulsar broker port
+      - "8080:8080"    # Pulsar admin/web UI port
+    environment:
+      PULSAR_MEM: "-Xms512m -Xmx512m"
+      PULSAR_GC: "-XX:+UseG1GC"
+    volumes:
+      - pulsar_data:/pulsar/data
+      - pulsar_conf:/pulsar/conf
+    networks:
+      - dotnet-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/admin/v2/brokers"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Backend API Service
+  apiservice:
+    build:
+      context: .
+      dockerfile: DotnetTelemetryPlayground.ApiService/Dockerfile
+    container_name: dotnet-apiservice
+    restart: unless-stopped
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__mongodb=mongodb://admin:password@mongo:27017
+      - ConnectionStrings__pulsar=pulsar://pulsar:6650
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://dotnet-otel-collector:4317
+      - OTEL_EXPORTER_OTLP_HEADERS=
+    depends_on:
+      mongo:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+    networks:
+      - dotnet-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Frontend API Service
+  apiserviceatfront:
+    build:
+      context: .
+      dockerfile: DotnetTelemetryPlayground.ApiServiceAtFront/Dockerfile
+    container_name: dotnet-apiserviceatfront
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - HttpClient__ApiService__BaseAddress=http://apiservice:8080
+      - ConnectionStrings__pulsar=pulsar://pulsar:6650
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://dotnet-otel-collector:4317
+      - OTEL_EXPORTER_OTLP_HEADERS=
+    depends_on:
+      - apiservice
+      - pulsar
+    networks:
+      - dotnet-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # otel-client:
+  #   build:
+  #     context: ./Example.Clients/test-OTEL-client-ts
+  #     dockerfile: Dockerfile
+  #   container_name: otel-client-ts
+  #   environment:
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4317}
+  #     - API_SERVICE_URL=http://apiserviceatfront:5000
+  #   networks:
+  #     - dotnet-network
+  #   # command: node dist/index.js
+  #   depends_on:
+  #     - apiserviceatfront
+
+  # Optional: OpenTelemetry Collector for advanced telemetry scenarios
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: dotnet-otel-collector
+    restart: unless-stopped
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver (exposed on different port from Tempo)
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Prometheus metrics (collector's own metrics)
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    networks:
+      - dotnet-network
+      - tracing-network
+    depends_on:
+      - tempo
+
+  # Grafana Tempo - Distributed Tracing Backend
+  tempo:
+    image: grafana/tempo:2.3.1
+    container_name: tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml
+      - tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP
+    networks:
+      - tracing-network
+    restart: unless-stopped
+    expose:
+      - "4317"
+      - "4318"
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - NO_PROXY=
+      - http_proxy=
+      - https_proxy=
+      - no_proxy=
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - tempo
+    networks:
+      - tracing-network
+    restart: unless-stopped
+
+networks:
+  dotnet-network:
+    driver: bridge
+  tracing-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  mongo_config:
+  pulsar_data:
+  pulsar_conf:
+  tempo-data:
+  grafana-data:

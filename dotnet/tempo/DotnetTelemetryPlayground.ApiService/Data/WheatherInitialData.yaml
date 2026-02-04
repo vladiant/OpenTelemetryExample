@@ -1,0 +1,40 @@
+# WeatherForecast test data with ancestor properties
+- forDate: "2025-12-01T00:00:00Z"
+  temperatureC: 5
+  summary: "Cold and clear"
+
+- forDate: "2025-12-02T00:00:00Z"
+  temperatureC: 3
+  summary: "Frosty morning"
+
+- forDate: "2025-12-03T00:00:00Z"
+  temperatureC: 7
+  summary: "Sunny intervals"
+
+- forDate: "2025-12-04T00:00:00Z"
+  temperatureC: 6
+  summary: "Cloudy"
+
+- forDate: "2025-12-05T00:00:00Z"
+  temperatureC: 4
+  summary: "Light rain"
+
+- forDate: "2025-12-06T00:00:00Z"
+  temperatureC: 2
+  summary: "Snow showers"
+
+- forDate: "2025-12-07T00:00:00Z"
+  temperatureC: 1
+  summary: "Freezing fog"
+
+- forDate: "2025-12-08T00:00:00Z"
+  temperatureC: 3
+  summary: "Partly cloudy"
+
+- forDate: "2025-12-09T00:00:00Z"
+  temperatureC: 5
+  summary: "Windy"
+
+- forDate: "2025-12-10T00:00:00Z"
+  temperatureC: 6
+  summary: "Mild and sunny"

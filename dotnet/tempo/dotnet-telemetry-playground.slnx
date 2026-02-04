@@ -1,0 +1,14 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Custom.Client/Custom.Client.csproj" />
+  <Project Path="Custom.Hosting/Custom.Hosting.csproj" />
+  <Project Path="DotnetTelemetryPlayground.ApiService/DotnetTelemetryPlayground.ApiService.csproj" />
+  <Project Path="DotnetTelemetryPlayground.ApiServiceAtFront/DotnetTelemetryPlayground.ApiServiceAtFront.csproj" />
+  <Project Path="DotnetTelemetryPlayground.AppHost/DotnetTelemetryPlayground.AppHost.csproj" />
+  <Project Path="DotnetTelemetryPlayground.ServiceDefaults/DotnetTelemetryPlayground.ServiceDefaults.csproj" />
+  <Project Path="DotnetTelemetryPlayground.Shared/DotnetTelemetryPlayground.Shared.csproj" />
+</Solution>
