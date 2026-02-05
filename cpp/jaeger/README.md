@@ -141,27 +141,7 @@ This project builds all C++ dependencies from source to ensure compatibility and
 
 ## Quick Start
 
-### 1. Clone and Setup
-
-```bash
-# Create project structure
-mkdir -p services/{api-gateway,order-service,user-service,payment-service,inventory-service}
-
-# Copy files to each service directory
-for service in api-gateway order-service user-service payment-service inventory-service; do
-  cp Dockerfile services/$service/
-  cp CMakeLists.txt services/$service/
-done
-
-# Copy the service implementations
-# Save api_gateway_cpp as services/api-gateway/main.cpp
-# Save order_service_cpp as services/order-service/main.cpp
-# Save user_service_cpp as services/user-service/main.cpp
-# Save payment_service_cpp as services/payment-service/main.cpp
-# Save inventory_service_cpp as services/inventory-service/main.cpp
-```
-
-### 2. Build and Run
+### 1. Build and Run
 
 ```bash
 # Build all services (first build: ~15-20 minutes)
@@ -177,7 +157,7 @@ docker-compose up -d
 docker-compose ps
 ```
 
-### 3. Test the System
+### 2. Test the System
 
 ```bash
 # Send a request to the API Gateway
@@ -190,7 +170,7 @@ curl http://localhost:8080/api/order
 # Expected response: JSON object with order details
 ```
 
-### 4. View Traces in Jaeger
+### 3. View Traces in Jaeger
 
 1. Open http://localhost:16686 in your browser
 2. Select service from the Service dropdown (e.g., "unknown_service", "jaeger-all-in-one")
