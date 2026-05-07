@@ -8,3 +8,4 @@ OpenTelemetry example
 * [OTTL Playground](https://ottl.run/)
 * [Introducing the OTTL Playground for OpenTelemetry](https://www.elastic.co/observability-labs/blog/introducing-the-ottl-playground-for-opentelemetry)
 * <https://github.com/dgroomes/open-telemetry-playground>
+* [Uptrace: Open Source APM ](https://uptrace.dev/get/hosted/open-source-apm)
